@@ -1,0 +1,23 @@
+{
+  "name": "bbc-scraper",
+  "version": "1.0.0",
+  "description": "Historical BBC homepage scraper using Wayback Machine",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start:resume": "node index.js --resume"
+  },
+  "keywords": [
+    "bbc",
+    "scraper",
+    "wayback-machine",
+    "historical"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "puppeteer": "^21.0.0"
+  }
+}
+
