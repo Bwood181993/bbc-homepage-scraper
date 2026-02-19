@@ -22,6 +22,34 @@ const {
 } = require('./src/checkpoint');
 
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Clean up previous run data (screenshots and results)
+ */
+function cleanupPreviousRun() {
+  console.log('Cleaning up previous run data...');
+
+  // Clear screenshots folder
+  const screenshotsDir = config.output.screenshotsDir;
+  if (fs.existsSync(screenshotsDir)) {
+    const files = fs.readdirSync(screenshotsDir);
+    for (const file of files) {
+      fs.unlinkSync(path.join(screenshotsDir, file));
+    }
+    console.log(`  Cleared ${files.length} screenshot(s)`);
+  }
+
+  // Clear results file
+  const resultsFile = config.output.resultsFile;
+  if (fs.existsSync(resultsFile)) {
+    fs.unlinkSync(resultsFile);
+    console.log('  Cleared results.json');
+  }
+
+  console.log('');
+}
 
 /**
  * Prompt user for input
@@ -61,8 +89,8 @@ async function processSnapshot(snapshot) {
 
   console.log(`\nProcessing: ${date} (${timestamp})`);
 
-  // Capture screenshot
-  const screenshotResult = await captureScreenshot(archiveUrl, timestamp);
+  // Capture screenshot (using date for filename in yyyy-mm-dd format)
+  const screenshotResult = await captureScreenshot(archiveUrl, date);
 
   // Get page for link extraction
   const { page, error: pageError, partial } = await getPage(archiveUrl);
@@ -129,8 +157,12 @@ async function main() {
       } else {
         console.log('Starting fresh...\n');
         clearCheckpoint();
+        cleanupPreviousRun();
       }
     }
+  } else {
+    // No checkpoint exists - starting fresh, clean up previous data
+    cleanupPreviousRun();
   }
 
   // Initialize results file

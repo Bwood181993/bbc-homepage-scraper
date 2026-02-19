@@ -7,8 +7,8 @@ module.exports = {
   // Default: past 5 days (for testing)
   // Can be extended to 200+ days for full campaigns
   dateRange: {
-    // Calculate start date (5 days ago by default)
-    daysBack: 5,
+    // Calculate start date (2 days ago for testing)
+    daysBack: 2,
     // Or specify explicit dates (overrides daysBack if set)
     startDate: null, // e.g., '20260101'
     endDate: null,   // e.g., '20260215'
@@ -54,6 +54,12 @@ module.exports = {
     maxLinks: 5,
     // Selector chain - tries each in order until one works
     selectorChain: [
+      // Primary: Links within first ul in main block (li elements)
+      'main ul:first-of-type li a',
+      'main ul li a',
+      // Secondary: Anchor tags within h3 elements (headline links)
+      'main h3 a',
+      'h3 a',
       // Modern BBC (2022+)
       '[data-testid="edinburgh-card"]',
       '[data-testid="anchor-inner-wrapper"]',

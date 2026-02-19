@@ -77,13 +77,13 @@ async function navigateWithFallback(page, url) {
 /**
  * Capture screenshot of archived BBC homepage
  * @param {string} archiveUrl - Full Wayback Machine URL
- * @param {string} timestamp - Snapshot timestamp for filename
+ * @param {string} date - Date in yyyy-mm-dd format for filename
  * @returns {Promise<{ success: boolean, screenshotPath: string | null, error: string | null, partial: boolean }>}
  */
-async function captureScreenshot(archiveUrl, timestamp) {
+async function captureScreenshot(archiveUrl, date) {
   ensureScreenshotsDir();
 
-  const screenshotPath = path.join(config.output.screenshotsDir, `${timestamp}.png`);
+  const screenshotPath = path.join(config.output.screenshotsDir, `${date}.png`);
 
   let page = null;
   try {
