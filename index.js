@@ -85,7 +85,7 @@ async function processSnapshot(snapshot) {
     // If extraction failed, retry after more rendering time
     if (!extraction.success) {
       console.log('  Retrying link extraction after additional delay...');
-      await sleep(5000);
+      await sleep(2500);
       extraction = await extractHeadlineLinks(page, year);
       extraction.partial = partial;
     }

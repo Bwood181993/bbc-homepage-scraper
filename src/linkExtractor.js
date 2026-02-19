@@ -53,7 +53,7 @@ function filterBbcLinks(links, year) {
       isArticleLink = true;
     } else {
       // Pre-2025: Accept 'article' or '/news/' links
-      isArticleLink = url.includes('article') || url.includes('/news/');
+      isArticleLink = true;
     }
 
     // Include BBC links, exclude common non-content links
@@ -111,6 +111,10 @@ async function extractWithSelector(page, selector) {
   }
 }
 
+const cleanTitle = (title) => {
+    return title.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
 /**
  * Extract top headline links from page using year-specific selector chain
  * @param {Page} page - Puppeteer page instance
@@ -124,43 +128,47 @@ async function extractHeadlineLinks(page, year) {
   const selectorChain = getSelectorsForYear(year);
   console.log(`  Using selectors for year ${year}`);
 
+  const uniqueLinks = [];
+  const selectorsUsed = [];
+  const seenUrls = new Set();
+
   for (const selector of selectorChain) {
     console.log(`  Trying selector: ${selector}`);
+
+    if (uniqueLinks.length >= defaultLinks) {
+        break;
+    }
 
     const rawLinks = await extractWithSelector(page, selector);
 
     if (rawLinks.length > 0) {
       // Clean URLs and filter
       const cleanedLinks = rawLinks.map(link => ({
-        title: link.title,
+        title: cleanTitle(link.title),
         url: cleanWaybackUrl(link.url),
       }));
 
       const filteredLinks = filterBbcLinks(cleanedLinks, year);
 
-      // Remove duplicates based on URL
-      const uniqueLinks = [];
-      const seenUrls = new Set();
-
       for (const link of filteredLinks) {
-        if (!seenUrls.has(link.url)) {
-          seenUrls.add(link.url);
-          uniqueLinks.push(link);
+        // Remove duplicates
+        if (!seenUrls.has(link.url) && uniqueLinks.length < defaultLinks) {
+            seenUrls.add(link.url);
+            uniqueLinks.push(link);
+            selectorsUsed.push(selector);
         }
       }
-
-      if (uniqueLinks.length > 0) {
-        const topLinks = uniqueLinks.slice(0, defaultLinks);
-        console.log(`  Found ${topLinks.length} links using selector: ${selector}`);
-
-        return {
-          success: true,
-          links: topLinks,
-          selectorUsed: selector,
-          reason: null,
-        };
-      }
+      console.log('uniqueLinks', uniqueLinks);
     }
+  }
+
+  if (uniqueLinks.length > 0) {
+    return {
+        success: true,
+        links: uniqueLinks,
+        selectorUsed: selectorsUsed,
+        reason: null,
+    };
   }
 
   // No selector worked
