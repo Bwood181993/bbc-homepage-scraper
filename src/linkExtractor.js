@@ -1,6 +1,6 @@
 /**
  * Link Extractor Module
- * Extracts top 5 headline links from BBC homepage with fallback chain
+ * Extracts top headline links from BBC homepage with year-specific selector chains
  */
 const config = require('../config');
 
@@ -36,13 +36,26 @@ function cleanWaybackUrl(url) {
 }
 
 /**
- * Filter links to only include BBC content links
+ * Filter links to only include BBC article links
+ * Rules vary by year
  * @param {Array<{title: string, url: string}>} links
+ * @param {number} year - The year of the snapshot
  * @returns {Array<{title: string, url: string}>}
  */
-function filterBbcLinks(links) {
+function filterBbcLinks(links, year) {
   return links.filter(link => {
     const url = link.url.toLowerCase();
+
+    // Year-specific article link rules
+    let isArticleLink;
+    if (year >= 2024) {
+      // 2025+: Only links containing 'article', exclude any '/news/' links
+      isArticleLink = true;
+    } else {
+      // Pre-2025: Accept 'article' or '/news/' links
+      isArticleLink = url.includes('article') || url.includes('/news/');
+    }
+
     // Include BBC links, exclude common non-content links
     const isBbcLink = url.includes('bbc.co.uk') || url.includes('bbc.com') || url.startsWith('/');
     const isNotExcluded = !url.includes('/accessibility') &&
@@ -54,7 +67,7 @@ function filterBbcLinks(links) {
                           !url.includes('login') &&
                           !url.includes('#') &&
                           !url.includes('javascript:');
-    return isBbcLink && isNotExcluded && link.title.trim().length > 0;
+    return isArticleLink && isBbcLink && isNotExcluded && link.title.trim().length > 0;
   });
 }
 
@@ -99,12 +112,17 @@ async function extractWithSelector(page, selector) {
 }
 
 /**
- * Extract top 5 headline links from page using fallback chain
+ * Extract top headline links from page using year-specific selector chain
  * @param {Page} page - Puppeteer page instance
+ * @param {number} year - The year of the snapshot (for selector selection)
  * @returns {Promise<{ success: boolean, links: Array, selectorUsed: string | null, reason: string | null }>}
  */
-async function extractHeadlineLinks(page) {
-  const { selectorChain, maxLinks } = config.extraction;
+async function extractHeadlineLinks(page, year) {
+  const { getSelectorsForYear, defaultLinks } = config.extraction;
+
+  // Get selectors appropriate for this year
+  const selectorChain = getSelectorsForYear(year);
+  console.log(`  Using selectors for year ${year}`);
 
   for (const selector of selectorChain) {
     console.log(`  Trying selector: ${selector}`);
@@ -118,7 +136,7 @@ async function extractHeadlineLinks(page) {
         url: cleanWaybackUrl(link.url),
       }));
 
-      const filteredLinks = filterBbcLinks(cleanedLinks);
+      const filteredLinks = filterBbcLinks(cleanedLinks, year);
 
       // Remove duplicates based on URL
       const uniqueLinks = [];
@@ -132,7 +150,7 @@ async function extractHeadlineLinks(page) {
       }
 
       if (uniqueLinks.length > 0) {
-        const topLinks = uniqueLinks.slice(0, maxLinks);
+        const topLinks = uniqueLinks.slice(0, defaultLinks);
         console.log(`  Found ${topLinks.length} links using selector: ${selector}`);
 
         return {
@@ -159,4 +177,3 @@ module.exports = {
   extractHeadlineLinks,
   cleanWaybackUrl,
 };
-

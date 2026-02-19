@@ -1,6 +1,61 @@
 /**
  * Configuration for BBC Historical Scraper
  */
+
+// Year-specific selector chains for different BBC layouts
+// Each year maps to an array of selectors to try in order
+const yearConfigs = {
+    2025: [
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+    2024: [
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+    2023: [
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+    2022: [
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+    2021: [
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+    2020: [
+        'section.uk-hero-promos-container'
+        'main ul:first-of-type li div[spacing="2"] a',
+        'main ul li a',
+    ],
+
+  // Fallback for any year not specifically handled
+  default: [
+    'div[type="article"] a',
+    'article a',
+    'main a',
+    'h3 a',
+    'h2 a',
+    '.story a',
+    '.headline a',
+    'section a',
+  ],
+};
+
+/**
+ * Get selectors for a specific year
+ * @param {number} year - The year to get selectors for
+ * @returns {Array<string>} - Array of CSS selectors
+ */
+function getSelectorsForYear(year) {
+  if (yearConfigs[year]) {
+    return yearConfigs[year];
+  }
+  return yearConfigs['default'];
+}
+
 module.exports = {
   // Date range settings
   // Format: YYYYMMDD
@@ -10,21 +65,15 @@ module.exports = {
     // Calculate start date (2 days ago for testing)
     daysBack: 2,
     // Or specify explicit dates (overrides daysBack if set)
-    startDate: null, // e.g., '20260101'
-    endDate: null,   // e.g., '20260215'
+    startDate: '20210101', // Start of 2021
+    endDate: '20211231',   // End of 2021
+    // Random sampling - set to a number to randomly select that many days
+    randomSample: 5,
   },
 
   // Rate limiting (in milliseconds)
   // Wayback Machine recommends ~1-2 seconds between requests
   rateLimitDelay: 1500,
-
-  // Checkpoint settings
-  checkpoint: {
-    // Save checkpoint after every N snapshots
-    saveInterval: 1,
-    // Checkpoint file path
-    filePath: './checkpoint.json',
-  },
 
   // Output settings
   output: {
@@ -46,39 +95,16 @@ module.exports = {
       width: 1920,
       height: 1080,
     },
-    timeout: 120000, // 2 minutes for very slow archive pages
+    timeout: 90000, // 1.5 minutes for very slow archive pages
+    extractionDelay: 0, // Delay before extracting links (ms) - allows page to fully render
   },
 
   // Link extraction settings
   extraction: {
-    maxLinks: 5,
-    // Selector chain - tries each in order until one works
-    selectorChain: [
-      // Primary: Links within first ul in main block (li elements)
-      'main ul:first-of-type li a',
-      'main ul li a',
-      // Secondary: Anchor tags within h3 elements (headline links)
-      'main h3 a',
-      'h3 a',
-      // Modern BBC (2022+)
-      '[data-testid="edinburgh-card"]',
-      '[data-testid="anchor-inner-wrapper"]',
-      // Recent BBC (2020-2022)
-      '.nw-c-top-stories__primary-item a',
-      '.nw-c-top-stories a',
-      // Older BBC (2018-2020)
-      '#news-top-stories-container a',
-      '.top-story a',
-      // Legacy fallbacks
-      '.story a',
-      '.headline a',
-      'article a',
-      // Final fallback - first section with links
-      'section a',
-      // Absolute fallback - any main content link
-      'main a',
-      '#main-content a',
-    ],
+    defaultLinks: 5,
+    // Function to get selectors based on year
+    getSelectorsForYear,
+    // All selectors by year (for reference)
+      yearConfigs,
   },
 };
-

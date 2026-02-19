@@ -169,9 +169,40 @@ async function getPage(archiveUrl) {
   }
 }
 
+/**
+ * Capture screenshot from an already-loaded page
+ * @param {Page} page - Puppeteer page instance
+ * @param {string} date - Date for filename (yyyy-mm-dd)
+ * @returns {Promise<{ success: boolean, screenshotPath: string | null, error: string | null }>}
+ */
+async function captureScreenshotFromPage(page, date) {
+  ensureScreenshotsDir();
+  const screenshotPath = path.join(config.output.screenshotsDir, `${date}.png`);
+
+  try {
+    await page.screenshot({
+      path: screenshotPath,
+      type: 'png',
+      clip: {
+        x: 0,
+        y: 0,
+        width: config.puppeteer.viewport.width,
+        height: config.puppeteer.viewport.height,
+      },
+    });
+
+    console.log(`  Screenshot saved: ${screenshotPath}`);
+    return { success: true, screenshotPath, error: null };
+  } catch (error) {
+    console.error(`  Screenshot error: ${error.message}`);
+    return { success: false, screenshotPath: null, error: error.message };
+  }
+}
+
 module.exports = {
   initBrowser,
   closeBrowser,
   captureScreenshot,
+  captureScreenshotFromPage,
   getPage,
 };

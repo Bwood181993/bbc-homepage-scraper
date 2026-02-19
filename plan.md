@@ -32,7 +32,7 @@ Edit `config.js` to customize:
 
 - `dateRange.daysBack`: Number of days to look back (default: 5, can scale to 200+)
 - `rateLimitDelay`: Milliseconds between requests (default: 1500ms)
-- `extraction.maxLinks`: Number of headline links to extract (default: 5)
+- `extraction.defaultLinks`: Number of headline links to extract (default: 5)
 
 ## Output
 

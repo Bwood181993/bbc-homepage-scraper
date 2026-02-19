@@ -3,25 +3,15 @@
  * Main entry point
  *
  * Usage:
- *   npm start           - Start fresh or prompt to resume
- *   npm run start:resume - Auto-resume from checkpoint
+ ing 8000m *   npm start                    - Analyse random dates from configured year
+ *   node index.js 2021-08-14     - Analyse a specific date
  */
 const config = require('./config');
-const { fetchSnapshots } = require('./src/wayback');
-const { captureScreenshot, getPage, closeBrowser } = require('./src/screenshot');
+const { fetchSnapshots, fetchSnapshotForDate } = require('./src/wayback');
+const { captureScreenshotFromPage, getPage, closeBrowser } = require('./src/screenshot');
 const { extractHeadlineLinks } = require('./src/linkExtractor');
 const { initResultsFile, saveResult, getStats } = require('./src/storage');
-const {
-  loadCheckpoint,
-  saveCheckpoint,
-  createCheckpoint,
-  updateCheckpoint,
-  clearCheckpoint,
-  getResumeIndex,
-  displayCheckpointInfo,
-} = require('./src/checkpoint');
 
-const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
 
@@ -52,25 +42,6 @@ function cleanupPreviousRun() {
 }
 
 /**
- * Prompt user for input
- * @param {string} question
- * @returns {Promise<string>}
- */
-function prompt(question) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise(resolve => {
-    rl.question(question, answer => {
-      rl.close();
-      resolve(answer.trim().toLowerCase());
-    });
-  });
-}
-
-/**
  * Sleep for specified milliseconds
  * @param {number} ms
  * @returns {Promise<void>}
@@ -89,17 +60,39 @@ async function processSnapshot(snapshot) {
 
   console.log(`\nProcessing: ${date} (${timestamp})`);
 
-  // Capture screenshot (using date for filename in yyyy-mm-dd format)
-  const screenshotResult = await captureScreenshot(archiveUrl, date);
+  // Extract year from date (yyyy-mm-dd format)
+  const year = parseInt(date.split('-')[0], 10);
 
-  // Get page for link extraction
+  // Get page instance (loads page once for both extraction and screenshot)
   const { page, error: pageError, partial } = await getPage(archiveUrl);
 
   let extraction;
+  let screenshotResult;
 
   if (page) {
-    extraction = await extractHeadlineLinks(page);
-    extraction.partial = partial; // Track if this was from a partial page load
+    // Wait for page to render if delay configured
+    const extractionDelay = config.puppeteer.extractionDelay;
+    if (extractionDelay > 0) {
+      console.log(`  Waiting ${extractionDelay}ms for page to render...`);
+      await sleep(extractionDelay);
+    }
+
+    // FIRST: Extract links
+    console.log('  Extracting links...');
+    extraction = await extractHeadlineLinks(page, year);
+    extraction.partial = partial;
+
+    // If extraction failed, retry after more rendering time
+    if (!extraction.success) {
+      console.log('  Retrying link extraction after additional delay...');
+      await sleep(5000);
+      extraction = await extractHeadlineLinks(page, year);
+      extraction.partial = partial;
+    }
+
+    // THEN: Take screenshot (after extraction is complete)
+    screenshotResult = await captureScreenshotFromPage(page, date);
+
     await page.close();
   } else {
     extraction = {
@@ -109,61 +102,45 @@ async function processSnapshot(snapshot) {
       reason: `page_load_failed: ${pageError}`,
       partial: false,
     };
+    screenshotResult = {
+      success: false,
+      screenshotPath: null,
+      error: pageError,
+    };
   }
 
-  const result = {
+  return {
     date,
     timestamp,
     archiveUrl,
     screenshotPath: screenshotResult.screenshotPath,
     screenshotSuccess: screenshotResult.success,
-    screenshotError: screenshotResult.error,
-    screenshotPartial: screenshotResult.partial || false,
     extraction,
   };
-
-  return result;
 }
 
 /**
  * Main scraper function
  */
 async function main() {
+  const startTime = Date.now();
+
   console.log('=================================');
   console.log('  BBC Historical Homepage Scraper');
   console.log('=================================\n');
 
-  // Check for --resume flag
+  // Check for arguments
   const args = process.argv.slice(2);
-  const autoResume = args.includes('--resume');
 
-  // Check for existing checkpoint
-  const { exists: checkpointExists, data: checkpointData } = loadCheckpoint();
+  // Check for specific date parameter (yyyy-mm-dd format)
+  const dateArg = args.find(arg => /^\d{4}-\d{2}-\d{2}$/.test(arg));
 
-  let startIndex = 0;
-
-  if (checkpointExists) {
-    displayCheckpointInfo();
-
-    if (autoResume) {
-      console.log('Auto-resuming from checkpoint...\n');
-      startIndex = checkpointData.lastProcessedIndex + 1;
-    } else {
-      const answer = await prompt('Resume from checkpoint? (y/n): ');
-
-      if (answer === 'y' || answer === 'yes') {
-        startIndex = checkpointData.lastProcessedIndex + 1;
-        console.log(`Resuming from snapshot ${startIndex + 1}...\n`);
-      } else {
-        console.log('Starting fresh...\n');
-        clearCheckpoint();
-        cleanupPreviousRun();
-      }
-    }
-  } else {
-    // No checkpoint exists - starting fresh, clean up previous data
-    cleanupPreviousRun();
+  if (dateArg) {
+    console.log(`Single date mode: ${dateArg}\n`);
   }
+
+  // Clean up previous data
+  cleanupPreviousRun();
 
   // Initialize results file
   initResultsFile();
@@ -171,7 +148,11 @@ async function main() {
   // Fetch available snapshots
   let snapshots;
   try {
-    snapshots = await fetchSnapshots();
+    if (dateArg) {
+      snapshots = await fetchSnapshotForDate(dateArg);
+    } else {
+      snapshots = await fetchSnapshots();
+    }
   } catch (error) {
     console.error('Failed to fetch snapshots. Exiting.');
     process.exit(1);
@@ -182,26 +163,19 @@ async function main() {
     process.exit(0);
   }
 
-  // Create checkpoint if starting fresh
-  if (startIndex === 0) {
-    saveCheckpoint(createCheckpoint(snapshots));
-  }
-
   console.log(`\nConfiguration:`);
   console.log(`  Rate limit delay: ${config.rateLimitDelay}ms`);
-  console.log(`  Starting from: snapshot ${startIndex + 1} of ${snapshots.length}`);
+  console.log(`  Snapshots to process: ${snapshots.length}`);
   console.log(`  Output: ${config.output.resultsFile}`);
   console.log(`  Screenshots: ${config.output.screenshotsDir}/`);
 
   // Process snapshots
-  const totalToProcess = snapshots.length - startIndex;
-  let processedCount = 0;
   let successCount = 0;
   let failCount = 0;
 
-  console.log(`\n--- Starting scrape of ${totalToProcess} snapshot(s) ---\n`);
+  console.log(`\n--- Starting scrape of ${snapshots.length} snapshot(s) ---\n`);
 
-  for (let i = startIndex; i < snapshots.length; i++) {
+  for (let i = 0; i < snapshots.length; i++) {
     const snapshot = snapshots[i];
 
     try {
@@ -209,11 +183,6 @@ async function main() {
 
       // Save result
       saveResult(result);
-
-      // Update checkpoint
-      updateCheckpoint(i, snapshot.timestamp, snapshots.length);
-
-      processedCount++;
 
       if (result.extraction.success) {
         successCount++;
@@ -244,7 +213,6 @@ async function main() {
         archiveUrl: snapshot.archiveUrl,
         screenshotPath: null,
         screenshotSuccess: false,
-        screenshotError: error.message,
         extraction: {
           success: false,
           links: [],
@@ -253,7 +221,6 @@ async function main() {
         },
       };
       saveResult(failedResult);
-      updateCheckpoint(i, snapshot.timestamp, snapshots.length);
 
       // Continue to next snapshot instead of aborting
       await sleep(config.rateLimitDelay);
@@ -263,19 +230,25 @@ async function main() {
   // Close browser
   await closeBrowser();
 
-  // Clear checkpoint on successful completion
-  clearCheckpoint();
 
   // Final summary
   console.log('\n=================================');
   console.log('         Scrape Complete!');
   console.log('=================================');
 
+  const endTime = Date.now();
+  const durationMs = endTime - startTime;
+  const durationSec = Math.floor(durationMs / 1000);
+  const minutes = Math.floor(durationSec / 60);
+  const seconds = durationSec % 60;
+  const durationStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
   const stats = getStats();
   console.log(`\nResults:`);
   console.log(`  Total snapshots processed: ${stats.total}`);
   console.log(`  Successful extractions: ${stats.successful}`);
   console.log(`  Failed extractions: ${stats.failed}`);
+  console.log(`  Duration: ${durationStr}`);
   console.log(`\nOutput saved to: ${config.output.resultsFile}`);
   console.log(`Screenshots saved to: ${config.output.screenshotsDir}/`);
 
@@ -290,4 +263,3 @@ main().catch(error => {
   console.error('\nFatal error:', error);
   process.exit(1);
 });
-
