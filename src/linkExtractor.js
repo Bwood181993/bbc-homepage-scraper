@@ -3,58 +3,18 @@
  * Extracts top headline links from BBC homepage with year-specific selector chains
  */
 const config = require('../config');
+const { cleanTitle, cleanWaybackUrl } = require('./utils');
 
-/**
- * Clean Wayback Machine URL to get original BBC URL
- * @param {string} url - Potentially prefixed Wayback URL
- * @returns {string} - Clean original URL
- */
-function cleanWaybackUrl(url) {
-  if (!url) return url;
-
-  // Wayback URLs look like: /web/20260101120000/https://www.bbc.co.uk/news/article
-  // or https://web.archive.org/web/20260101120000/https://www.bbc.co.uk/news/article
-  const waybackPattern = /(?:https?:\/\/web\.archive\.org)?\/web\/\d+\/(https?:\/\/.+)/;
-  const match = url.match(waybackPattern);
-
-  if (match) {
-    return match[1];
-  }
-
-  // Handle relative URLs - convert to absolute BBC URLs
-  if (url.startsWith('/')) {
-    // Remove any Wayback prefix from relative URLs
-    const relativePattern = /\/web\/\d+\/(.+)/;
-    const relMatch = url.match(relativePattern);
-    if (relMatch) {
-      return `https://www.bbc.co.uk${relMatch[1]}`;
-    }
-    return `https://www.bbc.co.uk${url}`;
-  }
-
-  return url;
-}
 
 /**
  * Filter links to only include BBC article links
  * Rules vary by year
  * @param {Array<{title: string, url: string}>} links
- * @param {number} year - The year of the snapshot
  * @returns {Array<{title: string, url: string}>}
  */
-function filterBbcLinks(links, year) {
+function filterBbcLinks(links) {
   return links.filter(link => {
     const url = link.url.toLowerCase();
-
-    // Year-specific article link rules
-    let isArticleLink;
-    if (year >= 2024) {
-      // 2025+: Only links containing 'article', exclude any '/news/' links
-      isArticleLink = true;
-    } else {
-      // Pre-2025: Accept 'article' or '/news/' links
-      isArticleLink = true;
-    }
 
     // Include BBC links, exclude common non-content links
     const isBbcLink = url.includes('bbc.co.uk') || url.includes('bbc.com') || url.startsWith('/');
@@ -67,7 +27,7 @@ function filterBbcLinks(links, year) {
                           !url.includes('login') &&
                           !url.includes('#') &&
                           !url.includes('javascript:');
-    return isArticleLink && isBbcLink && isNotExcluded && link.title.trim().length > 0;
+    return isBbcLink && isNotExcluded && link.title.trim().length > 0;
   });
 }
 
@@ -111,10 +71,6 @@ async function extractWithSelector(page, selector) {
   }
 }
 
-const cleanTitle = (title) => {
-    return title.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-}
-
 /**
  * Extract top headline links from page using year-specific selector chain
  * @param {Page} page - Puppeteer page instance
@@ -148,7 +104,7 @@ async function extractHeadlineLinks(page, year) {
         url: cleanWaybackUrl(link.url),
       }));
 
-      const filteredLinks = filterBbcLinks(cleanedLinks, year);
+      const filteredLinks = filterBbcLinks(cleanedLinks);
 
       for (const link of filteredLinks) {
         // Remove duplicates
@@ -183,5 +139,4 @@ async function extractHeadlineLinks(page, year) {
 
 module.exports = {
   extractHeadlineLinks,
-  cleanWaybackUrl,
 };

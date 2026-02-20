@@ -2,9 +2,6 @@
  * BBC Historical Homepage Scraper
  * Main entry point
  *
- * Usage:
- ing 8000m *   npm start                    - Analyse random dates from configured year
- *   node index.js 2021-08-14     - Analyse a specific date
  */
 const config = require('./config');
 const { fetchSnapshots, fetchSnapshotForDate } = require('./src/wayback');
