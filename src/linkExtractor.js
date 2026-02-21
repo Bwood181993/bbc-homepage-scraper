@@ -1,10 +1,5 @@
-/**
- * Link Extractor Module
- * Extracts top headline links from BBC homepage with year-specific selector chains
- */
 const config = require('../config');
 const { cleanTitle, cleanWaybackUrl } = require('./utils');
-
 
 /**
  * Filter links to only include BBC article links
@@ -13,20 +8,21 @@ const { cleanTitle, cleanWaybackUrl } = require('./utils');
  * @returns {Array<{title: string, url: string}>}
  */
 function filterBbcLinks(links) {
-  return links.filter(link => {
+  return links.filter((link) => {
     const url = link.url.toLowerCase();
 
     // Include BBC links, exclude common non-content links
     const isBbcLink = url.includes('bbc.co.uk') || url.includes('bbc.com') || url.startsWith('/');
-    const isNotExcluded = !url.includes('/accessibility') &&
-                          !url.includes('/privacy') &&
-                          !url.includes('/terms') &&
-                          !url.includes('/contact') &&
-                          !url.includes('/help') &&
-                          !url.includes('signin') &&
-                          !url.includes('login') &&
-                          !url.includes('#') &&
-                          !url.includes('javascript:');
+    const isNotExcluded =
+      !url.includes('/accessibility') &&
+      !url.includes('/privacy') &&
+      !url.includes('/terms') &&
+      !url.includes('/contact') &&
+      !url.includes('/help') &&
+      !url.includes('signin') &&
+      !url.includes('login') &&
+      !url.includes('#') &&
+      !url.includes('javascript:');
     return isBbcLink && isNotExcluded && link.title.trim().length > 0;
   });
 }
@@ -39,20 +35,21 @@ function filterBbcLinks(links) {
  */
 async function extractWithSelector(page, selector) {
   try {
-    const links = await page.evaluate((sel) => {
+    return await page.evaluate((sel) => {
       const elements = document.querySelectorAll(sel);
       const results = [];
 
-      elements.forEach(el => {
+      elements.forEach((el) => {
         // Get the href
         const href = el.getAttribute('href');
         if (!href) return;
 
         // Get text content - try various approaches
-        let title = el.textContent?.trim() ||
-                    el.getAttribute('aria-label') ||
-                    el.querySelector('h1, h2, h3, h4, span')?.textContent?.trim() ||
-                    '';
+        let title =
+          el.textContent?.trim() ||
+          el.getAttribute('aria-label') ||
+          el.querySelector('h1, h2, h3, h4, span')?.textContent?.trim() ||
+          '';
 
         // Clean up title - remove extra whitespace
         title = title.replace(/\s+/g, ' ').trim();
@@ -64,8 +61,6 @@ async function extractWithSelector(page, selector) {
 
       return results;
     }, selector);
-
-    return links;
   } catch (error) {
     return [];
   }
@@ -92,14 +87,14 @@ async function extractHeadlineLinks(page, year) {
     console.log(`  Trying selector: ${selector}`);
 
     if (uniqueLinks.length >= defaultLinks) {
-        break;
+      break;
     }
 
     const rawLinks = await extractWithSelector(page, selector);
 
     if (rawLinks.length > 0) {
       // Clean URLs and filter
-      const cleanedLinks = rawLinks.map(link => ({
+      const cleanedLinks = rawLinks.map((link) => ({
         title: cleanTitle(link.title),
         url: cleanWaybackUrl(link.url),
       }));
@@ -109,9 +104,11 @@ async function extractHeadlineLinks(page, year) {
       for (const link of filteredLinks) {
         // Remove duplicates
         if (!seenUrls.has(link.url) && uniqueLinks.length < defaultLinks) {
-            seenUrls.add(link.url);
-            uniqueLinks.push(link);
+          seenUrls.add(link.url);
+          uniqueLinks.push(link);
+          if (!selectorsUsed.includes(selector)) {
             selectorsUsed.push(selector);
+          }
         }
       }
       console.log('uniqueLinks', uniqueLinks);
@@ -120,12 +117,13 @@ async function extractHeadlineLinks(page, year) {
 
   if (uniqueLinks.length > 0) {
     return {
-        success: true,
-        links: uniqueLinks,
-        selectorUsed: selectorsUsed,
-        reason: null,
+      success: true,
+      links: uniqueLinks,
+      selectorUsed: selectorsUsed,
+      reason: null,
     };
   }
+  // @TODO - if no links found, try previous & next year selectors
 
   // No selector worked
   console.log('  No headline links found with any selector.');

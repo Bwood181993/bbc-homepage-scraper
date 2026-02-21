@@ -13,7 +13,7 @@ const config = require('../config');
  * @returns {Promise<void>}
  */
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 let browser = null;
@@ -122,7 +122,6 @@ async function captureScreenshot(archiveUrl, date) {
       error: navResult.error,
       partial,
     };
-
   } catch (error) {
     console.error(`  Screenshot error: ${error.message}`);
     if (page) {
@@ -161,9 +160,8 @@ async function getPage(archiveUrl) {
     return {
       page,
       error: navResult.error,
-      partial: navResult.timedOut || navResult.error !== null
+      partial: navResult.timedOut || navResult.error !== null,
     };
-
   } catch (error) {
     return { page: null, error: error.message, partial: false };
   }

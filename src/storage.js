@@ -42,7 +42,7 @@ function saveResult(result) {
   const data = loadResults();
 
   // Check if result for this timestamp already exists
-  const existingIndex = data.results.findIndex(r => r.timestamp === result.timestamp);
+  const existingIndex = data.results.findIndex((r) => r.timestamp === result.timestamp);
 
   if (existingIndex >= 0) {
     // Update existing result
@@ -75,7 +75,7 @@ function getResults() {
  */
 function isProcessed(timestamp) {
   const results = getResults();
-  return results.some(r => r.timestamp === timestamp);
+  return results.some((r) => r.timestamp === timestamp);
 }
 
 /**
@@ -84,8 +84,8 @@ function isProcessed(timestamp) {
  */
 function getStats() {
   const results = getResults();
-  const successful = results.filter(r => r.extraction?.success).length;
-  const failed = results.filter(r => !r.extraction?.success).length;
+  const successful = results.filter((r) => r.extraction?.success).length;
+  const failed = results.filter((r) => !r.extraction?.success).length;
 
   return {
     total: results.length,
@@ -102,4 +102,3 @@ module.exports = {
   isProcessed,
   getStats,
 };
-

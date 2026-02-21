@@ -107,7 +107,6 @@ async function fetchSnapshotForDate(dateStr) {
 
     console.log(`Found snapshot for ${dateStr}.`);
     return [snapshot];
-
   } catch (error) {
     console.error('Error fetching snapshot from Wayback Machine:', error.message);
     throw error;
@@ -147,7 +146,7 @@ async function fetchSnapshots() {
     const headers = data[0];
     const timestampIndex = headers.indexOf('timestamp');
 
-    let snapshots = data.slice(1).map(row => {
+    let snapshots = data.slice(1).map((row) => {
       const timestamp = row[timestampIndex];
       const dateStr = timestamp.slice(0, 8);
       const formattedDate = `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
@@ -168,7 +167,6 @@ async function fetchSnapshots() {
     }
 
     return snapshots;
-
   } catch (error) {
     console.error('Error fetching snapshots from Wayback Machine:', error.message);
     throw error;
