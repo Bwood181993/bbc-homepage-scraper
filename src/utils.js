@@ -1,4 +1,4 @@
-const cleanTitle = (title) => {
+export const cleanTitle = (title) => {
     return title
         .replace(/<[^>]*>/g, '')
         .replace(/\s+/g, ' ')
@@ -10,7 +10,7 @@ const cleanTitle = (title) => {
  * @param {string} url - Potentially prefixed Wayback URL
  * @returns {string} - Clean original URL
  */
-function cleanWaybackUrl(url) {
+export function cleanWaybackUrl(url) {
     if (!url) return url;
 
     // Wayback URLs look like: /web/20260101120000/https://www.bbc.co.uk/news/article
@@ -35,5 +35,3 @@ function cleanWaybackUrl(url) {
 
     return url;
 }
-
-module.exports = { cleanTitle, cleanWaybackUrl };

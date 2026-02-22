@@ -3,14 +3,15 @@
  * Main entry point
  *
  */
-const config = require('./config');
-const { fetchSnapshots, fetchSnapshotForDate } = require('./src/wayback');
-const { captureScreenshotFromPage, getPage, closeBrowser } = require('./src/screenshot');
-const { extractHeadlineLinks } = require('./src/linkExtractor');
-const { initResultsFile, saveResult, getStats } = require('./src/storage');
+import fs from 'fs';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
+import config from './config.js';
+import { fetchSnapshots, fetchSnapshotForDate } from'./src/wayback.js';
+import { captureScreenshotFromPage, getPage, closeBrowser } from'./src/screenshot.js';
+import { extractHeadlineLinks } from'./src/linkExtractor.js';
+import { initResultsFile, saveResult, getStats } from'./src/storage.js';
+
 
 /**
  * Clean up previous run data (screenshots and results)
@@ -138,9 +139,8 @@ async function main() {
         args.forEach((arg) => console.log(`  ${arg}`));
     }
 
-    console.log('process.argv', process.argv);
-    console.log('args', args);
-    return;
+    // return;
+
 
     // Check for specific date parameter (yyyy-mm-dd format)
     const dateArg = args.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg));

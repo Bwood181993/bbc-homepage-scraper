@@ -2,11 +2,10 @@
  * Screenshot Capture Module
  * Uses Puppeteer to capture viewport screenshots of archived pages
  */
-const puppeteer = require('puppeteer');
-const path = require('path');
-const fs = require('fs');
-const config = require('../config');
-
+import puppeteer from "puppeteer";
+import path from "path";
+import fs from "fs";
+import config from "../config.js";
 /**
  * Sleep helper function
  * @param {number} ms
@@ -22,7 +21,7 @@ let browser = null;
  * Initialize Puppeteer browser instance
  * @returns {Promise<Browser>}
  */
-async function initBrowser() {
+export async function initBrowser() {
     if (!browser) {
         browser = await puppeteer.launch({
             headless: config.puppeteer.headless,
@@ -34,7 +33,7 @@ async function initBrowser() {
 /**
  * Close browser instance
  */
-async function closeBrowser() {
+export async function closeBrowser() {
     if (browser) {
         await browser.close();
         browser = null;
@@ -44,7 +43,7 @@ async function closeBrowser() {
 /**
  * Ensure screenshots directory exists
  */
-function ensureScreenshotsDir() {
+export function ensureScreenshotsDir() {
     const dir = config.output.screenshotsDir;
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
@@ -57,7 +56,7 @@ function ensureScreenshotsDir() {
  * @param {string} url - URL to navigate to
  * @returns {Promise<{ timedOut: boolean, error: string | null }>}
  */
-async function navigateWithFallback(page, url) {
+export async function navigateWithFallback(page, url) {
     try {
         await page.goto(url, {
             waitUntil: 'domcontentloaded',
@@ -80,7 +79,7 @@ async function navigateWithFallback(page, url) {
  * @param {string} date - Date in yyyy-mm-dd format for filename
  * @returns {Promise<{ success: boolean, screenshotPath: string | null, error: string | null, partial: boolean }>}
  */
-async function captureScreenshot(archiveUrl, date) {
+export async function captureScreenshot(archiveUrl, date) {
     ensureScreenshotsDir();
 
     const screenshotPath = path.join(config.output.screenshotsDir, `${date}.png`);
@@ -145,7 +144,7 @@ async function captureScreenshot(archiveUrl, date) {
  * @param {string} archiveUrl
  * @returns {Promise<{ page: Page | null, error: string | null, partial: boolean }>}
  */
-async function getPage(archiveUrl) {
+export async function getPage(archiveUrl) {
     try {
         await initBrowser();
         const page = await browser.newPage();
@@ -173,7 +172,7 @@ async function getPage(archiveUrl) {
  * @param {string} date - Date for filename (yyyy-mm-dd)
  * @returns {Promise<{ success: boolean, screenshotPath: string | null, error: string | null }>}
  */
-async function captureScreenshotFromPage(page, date) {
+export async function captureScreenshotFromPage(page, date) {
     ensureScreenshotsDir();
     const screenshotPath = path.join(config.output.screenshotsDir, `${date}.png`);
 
@@ -196,11 +195,3 @@ async function captureScreenshotFromPage(page, date) {
         return { success: false, screenshotPath: null, error: error.message };
     }
 }
-
-module.exports = {
-    initBrowser,
-    closeBrowser,
-    captureScreenshot,
-    captureScreenshotFromPage,
-    getPage,
-};

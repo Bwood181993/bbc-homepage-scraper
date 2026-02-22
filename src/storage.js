@@ -2,13 +2,14 @@
  * JSON Storage Module
  * Handles saving results to JSON file
  */
-const fs = require('fs');
-const config = require('../config');
+
+import fs from 'fs';
+import config from '../config.js';
 
 /**
  * Initialize results file if it doesn't exist
  */
-function initResultsFile() {
+export function initResultsFile() {
     const filePath = config.output.resultsFile;
 
     if (!fs.existsSync(filePath)) {
@@ -28,7 +29,7 @@ function initResultsFile() {
  * Load existing results from file
  * @returns {{ metadata: object, results: Array }}
  */
-function loadResults() {
+export function loadResults() {
     initResultsFile();
     const data = fs.readFileSync(config.output.resultsFile, 'utf8');
     return JSON.parse(data);
@@ -38,7 +39,7 @@ function loadResults() {
  * Save result for a single snapshot
  * @param {object} result - Result object to save
  */
-function saveResult(result) {
+export function saveResult(result) {
     const data = loadResults();
 
     // Check if result for this timestamp already exists
@@ -63,7 +64,7 @@ function saveResult(result) {
  * Get all saved results
  * @returns {Array}
  */
-function getResults() {
+export function getResults() {
     const data = loadResults();
     return data.results;
 }
@@ -73,7 +74,7 @@ function getResults() {
  * @param {string} timestamp
  * @returns {boolean}
  */
-function isProcessed(timestamp) {
+export function isProcessed(timestamp) {
     const results = getResults();
     return results.some((r) => r.timestamp === timestamp);
 }
@@ -82,7 +83,7 @@ function isProcessed(timestamp) {
  * Get summary statistics
  * @returns {{ total: number, successful: number, failed: number }}
  */
-function getStats() {
+export function getStats() {
     const results = getResults();
     const successful = results.filter((r) => r.extraction?.success).length;
     const failed = results.filter((r) => !r.extraction?.success).length;
@@ -93,12 +94,3 @@ function getStats() {
         failed,
     };
 }
-
-module.exports = {
-    initResultsFile,
-    loadResults,
-    saveResult,
-    getResults,
-    isProcessed,
-    getStats,
-};

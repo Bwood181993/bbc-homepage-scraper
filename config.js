@@ -3,7 +3,6 @@
  */
 
 // Year-specific selector chains for different BBC layouts
-// Each year maps to an array of selectors to try in order
 const yearConfigs = {
     2025: ['main ul:first-of-type li div[spacing="2"] a', 'main ul li a'],
     2024: ['main ul:first-of-type li div[spacing="2"] a', 'main ul li a'],
@@ -69,21 +68,7 @@ function getSelectorsForYear(year) {
     return yearConfigs['default'];
 }
 
-module.exports = {
-    // Date range settings
-    // Format: YYYYMMDD
-    // Default: past 5 days (for testing)
-    // Can be extended to 200+ days for full campaigns
-    dateRange: {
-        // Calculate start date (2 days ago for testing)
-        daysBack: 2,
-        // Or specify explicit dates (overrides daysBack if set)
-        startDate: '20210101', // Start of 2021
-        endDate: '20211231', // End of 2021
-        // Random sampling - set to a number to randomly select that many days
-        randomSample: 5,
-    },
-
+const config = {
     // Rate limiting (in milliseconds)
     // Wayback Machine recommends ~1-2 seconds between requests
     rateLimitDelay: 1500,
@@ -121,3 +106,5 @@ module.exports = {
         yearConfigs,
     },
 };
+
+export default config;

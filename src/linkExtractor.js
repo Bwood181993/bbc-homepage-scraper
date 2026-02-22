@@ -1,5 +1,5 @@
-const config = require('../config');
-const { cleanTitle, cleanWaybackUrl } = require('./utils');
+import config from "../config.js";
+import { cleanTitle, cleanWaybackUrl } from './utils.js';
 
 /**
  * Filter links to only include BBC article links
@@ -73,7 +73,7 @@ async function extractWithSelector(page, selector) {
  * @param {number} year - The year of the snapshot (for selector selection)
  * @returns {Promise<{ success: boolean, links: Array, selectorUsed: string | null, reason: string | null }>}
  */
-async function extractHeadlineLinks(page, year) {
+export async function extractHeadlineLinks(page, year) {
     const { getSelectorsForYear, defaultLinks } = config.extraction;
 
     // Get selectors appropriate for this year
@@ -135,7 +135,3 @@ async function extractHeadlineLinks(page, year) {
         reason: 'no_selector_matched',
     };
 }
-
-module.exports = {
-    extractHeadlineLinks,
-};

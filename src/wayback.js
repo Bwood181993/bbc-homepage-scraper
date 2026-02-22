@@ -2,9 +2,9 @@
  * Wayback Machine API Integration
  * Fetches historical snapshots of BBC homepage
  */
-const axios = require('axios');
-const config = require('../config');
 
+import axios from 'axios';
+import config from '../config.js';
 /**
  * Format date as YYYYMMDD for Wayback Machine API
  * @param {Date} date
@@ -21,20 +21,7 @@ function formatDate(date) {
  * Calculate date range based on config
  * @returns {{ startDate: string, endDate: string }}
  */
-function getDateRange() {
-    const { dateRange } = config;
-
-    if (dateRange.startDate && dateRange.endDate) {
-        return {
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
-        };
-    }
-
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - dateRange.daysBack);
-
+function getDateRange(startDate, endDate) {
     return {
         startDate: formatDate(startDate),
         endDate: formatDate(endDate),
@@ -68,7 +55,7 @@ function randomSample(array, count) {
  * @param {string} dateStr - Date in yyyy-mm-dd format
  * @returns {Promise<Array<{ timestamp: string, archiveUrl: string, date: string }>>}
  */
-async function fetchSnapshotForDate(dateStr) {
+export async function fetchSnapshotForDate(dateStr) {
     const { cdxApiUrl, archiveUrlBase, targetUrl } = config.wayback;
 
     // Convert yyyy-mm-dd to yyyymmdd
@@ -117,10 +104,9 @@ async function fetchSnapshotForDate(dateStr) {
  * Fetch available snapshots from Wayback Machine CDX API
  * @returns {Promise<Array<{ timestamp: string, archiveUrl: string, date: string }>>}
  */
-async function fetchSnapshots() {
+export async function fetchSnapshots() {
     const { startDate, endDate } = getDateRange();
     const { cdxApiUrl, archiveUrlBase, targetUrl } = config.wayback;
-    const { randomSample: sampleCount } = config.dateRange;
 
     console.log(`Fetching snapshots from ${startDate} to ${endDate}...`);
 
@@ -161,10 +147,10 @@ async function fetchSnapshots() {
         console.log(`Found ${snapshots.length} total snapshot(s).`);
 
         // Apply random sampling if configured
-        if (sampleCount && sampleCount > 0) {
-            snapshots = randomSample(snapshots, sampleCount);
-            console.log(`Randomly selected ${snapshots.length} snapshot(s) for processing.`);
-        }
+        // if (sampleCount && sampleCount > 0) {
+        //     snapshots = randomSample(snapshots, sampleCount);
+        //     console.log(`Randomly selected ${snapshots.length} snapshot(s) for processing.`);
+        // }
 
         return snapshots;
     } catch (error) {
@@ -172,10 +158,3 @@ async function fetchSnapshots() {
         throw error;
     }
 }
-
-module.exports = {
-    fetchSnapshots,
-    fetchSnapshotForDate,
-    getDateRange,
-    formatDate,
-};
