@@ -9,19 +9,19 @@ const config = require('../config');
  * Initialize results file if it doesn't exist
  */
 function initResultsFile() {
-  const filePath = config.output.resultsFile;
+    const filePath = config.output.resultsFile;
 
-  if (!fs.existsSync(filePath)) {
-    const initialData = {
-      metadata: {
-        createdAt: new Date().toISOString(),
-        description: 'BBC Historical Homepage Scraper Results',
-      },
-      results: [],
-    };
-    fs.writeFileSync(filePath, JSON.stringify(initialData, null, 2));
-    console.log(`Created results file: ${filePath}`);
-  }
+    if (!fs.existsSync(filePath)) {
+        const initialData = {
+            metadata: {
+                createdAt: new Date().toISOString(),
+                description: 'BBC Historical Homepage Scraper Results',
+            },
+            results: [],
+        };
+        fs.writeFileSync(filePath, JSON.stringify(initialData, null, 2));
+        console.log(`Created results file: ${filePath}`);
+    }
 }
 
 /**
@@ -29,9 +29,9 @@ function initResultsFile() {
  * @returns {{ metadata: object, results: Array }}
  */
 function loadResults() {
-  initResultsFile();
-  const data = fs.readFileSync(config.output.resultsFile, 'utf8');
-  return JSON.parse(data);
+    initResultsFile();
+    const data = fs.readFileSync(config.output.resultsFile, 'utf8');
+    return JSON.parse(data);
 }
 
 /**
@@ -39,24 +39,24 @@ function loadResults() {
  * @param {object} result - Result object to save
  */
 function saveResult(result) {
-  const data = loadResults();
+    const data = loadResults();
 
-  // Check if result for this timestamp already exists
-  const existingIndex = data.results.findIndex((r) => r.timestamp === result.timestamp);
+    // Check if result for this timestamp already exists
+    const existingIndex = data.results.findIndex((r) => r.timestamp === result.timestamp);
 
-  if (existingIndex >= 0) {
-    // Update existing result
-    data.results[existingIndex] = result;
-  } else {
-    // Add new result
-    data.results.push(result);
-  }
+    if (existingIndex >= 0) {
+        // Update existing result
+        data.results[existingIndex] = result;
+    } else {
+        // Add new result
+        data.results.push(result);
+    }
 
-  // Update metadata
-  data.metadata.lastUpdated = new Date().toISOString();
-  data.metadata.totalSnapshots = data.results.length;
+    // Update metadata
+    data.metadata.lastUpdated = new Date().toISOString();
+    data.metadata.totalSnapshots = data.results.length;
 
-  fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
+    fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
 }
 
 /**
@@ -64,8 +64,8 @@ function saveResult(result) {
  * @returns {Array}
  */
 function getResults() {
-  const data = loadResults();
-  return data.results;
+    const data = loadResults();
+    return data.results;
 }
 
 /**
@@ -74,8 +74,8 @@ function getResults() {
  * @returns {boolean}
  */
 function isProcessed(timestamp) {
-  const results = getResults();
-  return results.some((r) => r.timestamp === timestamp);
+    const results = getResults();
+    return results.some((r) => r.timestamp === timestamp);
 }
 
 /**
@@ -83,22 +83,22 @@ function isProcessed(timestamp) {
  * @returns {{ total: number, successful: number, failed: number }}
  */
 function getStats() {
-  const results = getResults();
-  const successful = results.filter((r) => r.extraction?.success).length;
-  const failed = results.filter((r) => !r.extraction?.success).length;
+    const results = getResults();
+    const successful = results.filter((r) => r.extraction?.success).length;
+    const failed = results.filter((r) => !r.extraction?.success).length;
 
-  return {
-    total: results.length,
-    successful,
-    failed,
-  };
+    return {
+        total: results.length,
+        successful,
+        failed,
+    };
 }
 
 module.exports = {
-  initResultsFile,
-  loadResults,
-  saveResult,
-  getResults,
-  isProcessed,
-  getStats,
+    initResultsFile,
+    loadResults,
+    saveResult,
+    getResults,
+    isProcessed,
+    getStats,
 };
