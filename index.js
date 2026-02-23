@@ -3,41 +3,12 @@
  * Main entry point
  *
  */
-import fs from 'fs';
-import path from 'path';
-
 import config from './config.js';
 import { fetchSnapshots, fetchSnapshotForDate } from'./src/wayback.js';
 import { captureScreenshotFromPage, getPage, closeBrowser } from'./src/screenshot.js';
 import { extractHeadlineLinks } from'./src/linkExtractor.js';
-import { initResultsFile, saveResult, getStats } from'./src/storage.js';
+import {cleanupPreviousRun, initResultsFile, saveResult, getStats, saveFailedRun} from './src/storage.js';
 
-
-/**
- * Clean up previous run data (screenshots and results)
- */
-function cleanupPreviousRun() {
-    console.log('Cleaning up previous run data...');
-
-    // Clear screenshots folder
-    const screenshotsDir = config.output.screenshotsDir;
-    if (fs.existsSync(screenshotsDir)) {
-        const files = fs.readdirSync(screenshotsDir);
-        for (const file of files) {
-            fs.unlinkSync(path.join(screenshotsDir, file));
-        }
-        console.log(`  Cleared ${files.length} screenshot(s)`);
-    }
-
-    // Clear results file
-    const resultsFile = config.output.resultsFile;
-    if (fs.existsSync(resultsFile)) {
-        fs.unlinkSync(resultsFile);
-        console.log('  Cleared results.json');
-    }
-
-    console.log('');
-}
 
 /**
  * Sleep for specified milliseconds
@@ -76,7 +47,7 @@ async function processSnapshot(snapshot) {
         }
 
         // FIRST: Extract links
-        console.log('  Extracting links...');
+        console.log('Extracting links...');
         extraction = await extractHeadlineLinks(page, year);
         extraction.partial = partial;
 
@@ -89,41 +60,53 @@ async function processSnapshot(snapshot) {
         }
 
         // THEN: Take screenshot (after extraction is complete)
-        screenshotResult = await captureScreenshotFromPage(page, date);
+        if (config.enableScreenshots) {
+            screenshotResult = await captureScreenshotFromPage(page, date);
+        }
 
         await page.close();
     } else {
         extraction = {
             success: false,
             links: [],
-            selectorUsed: null,
             reason: `page_load_failed: ${pageError}`,
+            selectorUsed: null,
             partial: false,
         };
-        screenshotResult = {
-            success: false,
-            error: pageError,
-        };
+        screenshotResult = false;
     }
 
     return {
-        date,
-        timestamp,
-        archiveUrl,
-        screenshotSuccess: screenshotResult.success,
-        extraction,
+        [date]: {
+            success: true,
+            timestamp,
+            archiveUrl,
+            screenshotSuccess: screenshotResult.success,
+            links: extraction.links,
+        }
     };
 }
+
+const validateInputs = (args) => {
+    const startDate = args[0];
+    const endDate = args[1];
+
+    // Validate start date
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args[0])) {
+        console.log('No valid dates provided. Exiting.');
+        process.exit(1);
+    }
+
+    return startDate;
+}
+
 
 /**
  * Main scraper function
  */
 async function main() {
-    const startTime = Date.now();
-
-    console.log('=================================');
-    console.log('  BBC Historical Homepage Scraper');
-    console.log('=================================\n');
+    console.log('--- Scraper Startup ---');
+    const scraperStart = Date.now();
 
     // Check for arguments
     const args = process.argv.slice(2);
@@ -139,30 +122,26 @@ async function main() {
         args.forEach((arg) => console.log(`  ${arg}`));
     }
 
+    // 5. Run Scrape for each date in date range
+        // a. Fetch Snapshots
+        // b. Process Snapshots
+        // c. Print screenshots
+    // 6. Print Results
+    // 7. Shut down
     // return;
 
+    // Validate
+    // TODO - add end date validation and retrieval here
+    const startDate = validateInputs(args);
 
-    // Check for specific date parameter (yyyy-mm-dd format)
-    const dateArg = args.find((arg) => /^\d{4}-\d{2}-\d{2}$/.test(arg));
-
-    if (dateArg) {
-        console.log(`Single date mode: ${dateArg}\n`);
-    }
-
-    // Clean up previous data
-    cleanupPreviousRun();
-
-    // Initialize results file
-    initResultsFile();
+    cleanupPreviousRun();  // Clean up previous data
+    initResultsFile(); // Initialize results file
 
     // Fetch available snapshots
     let snapshots;
     try {
-        if (dateArg) {
-            snapshots = await fetchSnapshotForDate(dateArg);
-        } else {
-            snapshots = await fetchSnapshots();
-        }
+        snapshots = await fetchSnapshotForDate(startDate);
+        // snapshots = await fetchSnapshots();
     } catch (error) {
         console.error('Failed to fetch snapshots. Exiting.');
         process.exit(1);
@@ -179,6 +158,9 @@ async function main() {
     console.log(`  Output: ${config.output.resultsFile}`);
     console.log(`  Screenshots: ${config.output.screenshotsDir}/`);
 
+    console.log('Snapshots', snapshots);
+    // return;
+
     // Process snapshots
     let successCount = 0;
     let failCount = 0;
@@ -193,13 +175,14 @@ async function main() {
 
             // Save result
             saveResult(result);
+            const resultDetails = result[snapshot.date];
 
-            if (result.extraction.success) {
+            if (resultDetails.success) {
                 successCount++;
-                console.log(`  ✓ Extracted ${result.extraction.links.length} links`);
+                console.log(`  ✓ Extracted ${resultDetails.links.length} links`);
             } else {
                 failCount++;
-                console.log(`  ✗ Extraction failed: ${result.extraction.reason}`);
+                console.log(`  ✗ Extraction failed: ${resultDetails.reason}`);
             }
 
             // Progress update
@@ -220,13 +203,10 @@ async function main() {
                 [snapshot.date]: {
                     archiveUrl: snapshot.archiveUrl,
                     timestamp: snapshot.timestamp,
-                    links: [],
-                    selectorsUsed: null,
-                    msg: `processing_error: ${error.message}`,
-                    success: false,
+                    msg: `Error: ${error.message}`,
                 },
             };
-            saveResult(failedResult);
+            saveFailedRun(failedResult);
 
             // Continue to next snapshot instead of aborting
             await sleep(config.rateLimitDelay);
@@ -237,12 +217,11 @@ async function main() {
     await closeBrowser();
 
     // Final summary
-    console.log('\n=================================');
-    console.log('         Scrape Complete!');
-    console.log('=================================');
+    console.log('---Scrape Complete---');
 
-    const endTime = Date.now();
-    const durationMs = endTime - startTime;
+    // @TODO - extract out this calculation
+    const scraperEnd = Date.now();
+    const durationMs = scraperEnd - scraperStart;
     const durationSec = Math.floor(durationMs / 1000);
     const minutes = Math.floor(durationSec / 60);
     const seconds = durationSec % 60;

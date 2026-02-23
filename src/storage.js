@@ -5,6 +5,26 @@
 
 import fs from 'fs';
 import config from '../config.js';
+import path from 'path';
+
+export function cleanupPreviousRun() {
+    console.log('Cleaning up previous run data...');
+
+    // Clear screenshots folder
+    const screenshotsDir = config.output.screenshotsDir;
+    if (fs.existsSync(screenshotsDir)) {
+        const files = fs.readdirSync(screenshotsDir);
+        for (const file of files) {
+            fs.unlinkSync(path.join(screenshotsDir, file));
+        }
+    }
+
+    // Clear results file
+    const resultsFile = config.output.resultsFile;
+    if (fs.existsSync(resultsFile)) {
+        fs.unlinkSync(resultsFile);
+    }
+}
 
 /**
  * Initialize results file if it doesn't exist
@@ -16,8 +36,8 @@ export function initResultsFile() {
         const initialData = {
             metadata: {
                 createdAt: new Date().toISOString(),
-                description: 'BBC Historical Homepage Scraper Results',
             },
+            failed: [],
             results: [],
         };
         fs.writeFileSync(filePath, JSON.stringify(initialData, null, 2));
@@ -54,29 +74,26 @@ export function saveResult(result) {
     }
 
     // Update metadata
-    data.metadata.lastUpdated = new Date().toISOString();
     data.metadata.totalSnapshots = data.results.length;
 
     fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
 }
 
-/**
- * Get all saved results
- * @returns {Array}
- */
-export function getResults() {
+export function saveFailedRun(details) {
     const data = loadResults();
-    return data.results;
-}
 
-/**
- * Check if a timestamp has already been processed
- * @param {string} timestamp
- * @returns {boolean}
- */
-export function isProcessed(timestamp) {
-    const results = getResults();
-    return results.some((r) => r.timestamp === timestamp);
+    // Check if result for this timestamp already exists
+    const existingIndex = data.failed.findIndex((r) => r.timestamp === details[0]);
+
+    if (existingIndex >= 0) {
+        // Update existing result
+        data.failed[existingIndex] = details;
+    } else {
+        // Add new result
+        data.failed.push(details);
+    }
+
+    fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
 }
 
 /**
@@ -84,12 +101,12 @@ export function isProcessed(timestamp) {
  * @returns {{ total: number, successful: number, failed: number }}
  */
 export function getStats() {
-    const results = getResults();
-    const successful = results.filter((r) => r.extraction?.success).length;
-    const failed = results.filter((r) => !r.extraction?.success).length;
+    const data = loadResults();
+    const successful = data.results.length;
+    const failed = data.failed.length;
 
     return {
-        total: results.length,
+        total: successful + failed,
         successful,
         failed,
     };

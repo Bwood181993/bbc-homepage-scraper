@@ -72,18 +72,12 @@ const config = {
     // Rate limiting (in milliseconds)
     // Wayback Machine recommends ~1-2 seconds between requests
     rateLimitDelay: 1500,
+    enableScreenshots: true,
 
     // Output settings
     output: {
         resultsFile: './results.json',
         screenshotsDir: './screenshots',
-    },
-
-    // Wayback Machine settings
-    wayback: {
-        cdxApiUrl: 'https://web.archive.org/cdx/search/cdx',
-        archiveUrlBase: 'https://web.archive.org/web',
-        targetUrl: 'https://www.bbc.co.uk',
     },
 
     // Puppeteer settings
@@ -94,7 +88,7 @@ const config = {
             height: 1080,
         },
         timeout: 90000, // 1.5 minutes for very slow archive pages
-        extractionDelay: 0, // Delay before extracting links (ms) - allows page to fully render
+        extractionDelay: 0, // Delay before extracting links (ms)
     },
 
     // Link extraction settings

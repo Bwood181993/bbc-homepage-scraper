@@ -2,10 +2,10 @@
  * Screenshot Capture Module
  * Uses Puppeteer to capture viewport screenshots of archived pages
  */
-import puppeteer from "puppeteer";
-import path from "path";
-import fs from "fs";
-import config from "../config.js";
+import puppeteer from 'puppeteer';
+import path from 'path';
+import fs from 'fs';
+import config from '../config.js';
 /**
  * Sleep helper function
  * @param {number} ms

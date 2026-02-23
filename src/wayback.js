@@ -4,7 +4,11 @@
  */
 
 import axios from 'axios';
-import config from '../config.js';
+
+const CDX_API_URL = 'https://web.archive.org/cdx/search/cdx';
+const ARCHIVE_URL_BASE = 'https://web.archive.org/web';
+const TARGET_URL = 'https://www.bbc.co.uk/';
+
 /**
  * Format date as YYYYMMDD for Wayback Machine API
  * @param {Date} date
@@ -56,15 +60,13 @@ function randomSample(array, count) {
  * @returns {Promise<Array<{ timestamp: string, archiveUrl: string, date: string }>>}
  */
 export async function fetchSnapshotForDate(dateStr) {
-    const { cdxApiUrl, archiveUrlBase, targetUrl } = config.wayback;
-
     // Convert yyyy-mm-dd to yyyymmdd
     const dateForApi = dateStr.replace(/-/g, '');
 
     console.log(`Fetching snapshot for ${dateStr}...`);
 
     const params = {
-        url: targetUrl,
+        url: TARGET_URL,
         output: 'json',
         from: dateForApi,
         to: dateForApi,
@@ -73,7 +75,7 @@ export async function fetchSnapshotForDate(dateStr) {
     };
 
     try {
-        const response = await axios.get(cdxApiUrl, { params });
+        const response = await axios.get(CDX_API_URL, { params });
         const data = response.data;
 
         if (!data || data.length < 2) {
@@ -89,7 +91,7 @@ export async function fetchSnapshotForDate(dateStr) {
         const snapshot = {
             timestamp,
             date: dateStr,
-            archiveUrl: `${archiveUrlBase}/${timestamp}/${targetUrl}`,
+            archiveUrl: `${ARCHIVE_URL_BASE}/${timestamp}/${TARGET_URL}`,
         };
 
         console.log(`Found snapshot for ${dateStr}.`);
@@ -106,12 +108,12 @@ export async function fetchSnapshotForDate(dateStr) {
  */
 export async function fetchSnapshots() {
     const { startDate, endDate } = getDateRange();
-    const { cdxApiUrl, archiveUrlBase, targetUrl } = config.wayback;
+    const sampleCount = 15;
 
     console.log(`Fetching snapshots from ${startDate} to ${endDate}...`);
 
     const params = {
-        url: targetUrl,
+        url: TARGET_URL,
         output: 'json',
         from: startDate,
         to: endDate,
@@ -120,7 +122,7 @@ export async function fetchSnapshots() {
     };
 
     try {
-        const response = await axios.get(cdxApiUrl, { params });
+        const response = await axios.get(CDX_API_URL, { params });
         const data = response.data;
 
         if (!data || data.length < 2) {
@@ -147,10 +149,10 @@ export async function fetchSnapshots() {
         console.log(`Found ${snapshots.length} total snapshot(s).`);
 
         // Apply random sampling if configured
-        // if (sampleCount && sampleCount > 0) {
-        //     snapshots = randomSample(snapshots, sampleCount);
-        //     console.log(`Randomly selected ${snapshots.length} snapshot(s) for processing.`);
-        // }
+        if (sampleCount && sampleCount > 0) {
+            snapshots = randomSample(snapshots, sampleCount);
+            console.log(`Randomly selected ${snapshots.length} snapshot(s) for processing.`);
+        }
 
         return snapshots;
     } catch (error) {

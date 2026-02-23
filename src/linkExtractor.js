@@ -1,4 +1,4 @@
-import config from "../config.js";
+import config from '../config.js';
 import { cleanTitle, cleanWaybackUrl } from './utils.js';
 
 /**
