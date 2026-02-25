@@ -56,22 +56,10 @@ const yearConfigs = {
     ],
 };
 
-/**
- * Get selectors for a specific year
- * @param {number} year - The year to get selectors for
- * @returns {Array<string>} - Array of CSS selectors
- */
-function getSelectorsForYear(year) {
-    if (yearConfigs[year]) {
-        return yearConfigs[year];
-    }
-    return yearConfigs['default'];
-}
-
 const config = {
     rateLimitDelay: 1500,  // Wayback Machine recommends ~1-2 seconds between requests
     enableScreenshots: true,
-    randomMode: true,
+    randomMode: false, // when disabled will process all dates between start and end
     randomCount: 5,
     // Output settings
     output: {
