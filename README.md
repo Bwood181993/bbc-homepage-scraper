@@ -1,7 +1,7 @@
 
 ## BBC Homepage Scraper
 
-This is a tool used for scraping the top 5 new articles displayed on the bbc homepage over time. Leverages the [web archive]() api to find snapshots and [puppeteer](https://pptr.dev/) for browser scraping.
+This is a tool used for scraping the top 5 new articles displayed on the bbc homepage over time. Leverages the [web archive](https://web.archive.org/) api to find snapshots and [puppeteer](https://pptr.dev/) for browser scraping.
 
 ### Installation
 ```bash
