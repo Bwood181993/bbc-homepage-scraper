@@ -74,10 +74,10 @@ async function extractWithSelector(page, selector) {
  * @returns {Promise<{ success: boolean, links: Array, selectorUsed: string | null, reason: string | null }>}
  */
 export async function extractHeadlineLinks(page, year) {
-    const { getSelectorsForYear, defaultLinks } = config.extraction;
+    const { yearConfigs, linksToExtract } = config;
 
     // Get selectors appropriate for this year
-    const selectorChain = getSelectorsForYear(year);
+    const selectorChain = yearConfigs[year];
     console.log(`  Using selectors for year ${year}`);
 
     const uniqueLinks = [];
@@ -87,7 +87,7 @@ export async function extractHeadlineLinks(page, year) {
     for (const selector of selectorChain) {
         console.log(`  Trying selector: ${selector}`);
 
-        if (uniqueLinks.length >= defaultLinks) {
+        if (uniqueLinks.length >= linksToExtract) {
             break;
         }
 
@@ -104,7 +104,7 @@ export async function extractHeadlineLinks(page, year) {
 
             for (const link of filteredLinks) {
                 // Remove duplicates
-                if (!seenUrls.has(link.url) && uniqueLinks.length < defaultLinks) {
+                if (!seenUrls.has(link.url) && uniqueLinks.length < linksToExtract) {
                     seenUrls.add(link.url);
                     uniqueLinks.push(link);
                     if (!selectorsUsed.includes(selector)) {
@@ -112,7 +112,6 @@ export async function extractHeadlineLinks(page, year) {
                     }
                 }
             }
-            console.log('uniqueLinks', uniqueLinks);
         }
     }
 

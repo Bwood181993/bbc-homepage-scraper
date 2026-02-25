@@ -69,17 +69,15 @@ function getSelectorsForYear(year) {
 }
 
 const config = {
-    // Rate limiting (in milliseconds)
-    // Wayback Machine recommends ~1-2 seconds between requests
-    rateLimitDelay: 1500,
+    rateLimitDelay: 1500,  // Wayback Machine recommends ~1-2 seconds between requests
     enableScreenshots: true,
-
+    randomMode: true,
+    randomCount: 5,
     // Output settings
     output: {
         resultsFile: './results.json',
         screenshotsDir: './screenshots',
     },
-
     // Puppeteer settings
     puppeteer: {
         headless: 'new', // Use new headless mode
@@ -90,15 +88,9 @@ const config = {
         timeout: 90000, // 1.5 minutes for very slow archive pages
         extractionDelay: 0, // Delay before extracting links (ms)
     },
-
     // Link extraction settings
-    extraction: {
-        defaultLinks: 5,
-        // Function to get selectors based on year
-        getSelectorsForYear,
-        // All selectors by year (for reference)
-        yearConfigs,
-    },
+    yearConfigs,
+    linksToExtract: 5,
 };
 
 export default config;

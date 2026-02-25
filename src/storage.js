@@ -62,18 +62,7 @@ export function loadResults() {
 export function saveResult(result) {
     const data = loadResults();
 
-    // Check if result for this timestamp already exists
-    const existingIndex = data.results.findIndex((r) => r.timestamp === result.timestamp);
-
-    if (existingIndex >= 0) {
-        // Update existing result
-        data.results[existingIndex] = result;
-    } else {
-        // Add new result
-        data.results.push(result);
-    }
-
-    // Update metadata
+    data.results.push(result);
     data.metadata.totalSnapshots = data.results.length;
 
     fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
@@ -81,18 +70,7 @@ export function saveResult(result) {
 
 export function saveFailedRun(details) {
     const data = loadResults();
-
-    // Check if result for this timestamp already exists
-    const existingIndex = data.failed.findIndex((r) => r.timestamp === details[0]);
-
-    if (existingIndex >= 0) {
-        // Update existing result
-        data.failed[existingIndex] = details;
-    } else {
-        // Add new result
-        data.failed.push(details);
-    }
-
+    data.failed.push(details);
     fs.writeFileSync(config.output.resultsFile, JSON.stringify(data, null, 2));
 }
 

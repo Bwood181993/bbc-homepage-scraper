@@ -4,7 +4,7 @@
  *
  */
 import config from './config.js';
-import { fetchSnapshots, fetchSnapshotForDate } from'./src/wayback.js';
+import { fetchSnapshots } from'./src/wayback.js';
 import { captureScreenshotFromPage, getPage, closeBrowser } from'./src/screenshot.js';
 import { extractHeadlineLinks } from'./src/linkExtractor.js';
 import {cleanupPreviousRun, initResultsFile, saveResult, getStats, saveFailedRun} from './src/storage.js';
@@ -30,8 +30,7 @@ async function processSnapshot(snapshot) {
     console.log(`\nProcessing: ${date} (${timestamp})`);
 
     // Extract year from date (yyyy-mm-dd format)
-    const year = parseInt(date.split('-')[0], 10);
-
+    const year = parseInt(date.split('-')[0]);
     // Get page instance (loads page once for both extraction and screenshot)
     const { page, error: pageError, partial } = await getPage(archiveUrl);
 
@@ -88,16 +87,26 @@ async function processSnapshot(snapshot) {
 }
 
 const validateInputs = (args) => {
-    const startDate = args[0];
-    const endDate = args[1];
+    let startDate = null;
+    let endDate = null;
 
     // Validate start date
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args[0])) {
-        console.log('No valid dates provided. Exiting.');
+    if (args[0] && /^\d{4}-\d{2}-\d{2}$/.test(args[0])) {
+        startDate = args[0];
+    } else {
+        console.log('No valid date provided. Exiting.');
         process.exit(1);
     }
 
-    return startDate;
+    if (args[1] && /^\d{4}-\d{2}-\d{2}$/.test(args[1])) {
+        if (new Date(args[1]) <= new Date(args[0])) {
+            console.log('Invalid date range. Proceeding in single date mode.');
+        } else {
+            endDate = args[1];
+        }
+    }
+
+    return [startDate, endDate];
 }
 
 
@@ -114,36 +123,21 @@ async function main() {
     if (args.length === 0) {
         return console.log('No arguments provided. Exiting.');
     }
-    if (args.length === 1) {
-        console.log(`Single date mode: ${args[0]}\n`);
-    }
-    if (args.length > 1) {
-        console.log('Multiple dates mode:');
-        args.forEach((arg) => console.log(`  ${arg}`));
-    }
-
-    // 5. Run Scrape for each date in date range
-        // a. Fetch Snapshots
-        // b. Process Snapshots
-        // c. Print screenshots
-    // 6. Print Results
-    // 7. Shut down
-    // return;
 
     // Validate
-    // TODO - add end date validation and retrieval here
-    const startDate = validateInputs(args);
+    const [startDate, endDate] = validateInputs(args);
 
-    cleanupPreviousRun();  // Clean up previous data
-    initResultsFile(); // Initialize results file
+    // Setup
+    cleanupPreviousRun();
+    initResultsFile();
 
     // Fetch available snapshots
     let snapshots;
     try {
-        snapshots = await fetchSnapshotForDate(startDate);
+        snapshots = await fetchSnapshots(startDate, endDate);
         // snapshots = await fetchSnapshots();
     } catch (error) {
-        console.error('Failed to fetch snapshots. Exiting.');
+        console.error('Failed to fetch snapshots. Exiting.', error.message);
         process.exit(1);
     }
 
@@ -152,19 +146,12 @@ async function main() {
         process.exit(0);
     }
 
-    console.log(`\nConfiguration:`);
-    console.log(`  Rate limit delay: ${config.rateLimitDelay}ms`);
-    console.log(`  Snapshots to process: ${snapshots.length}`);
-    console.log(`  Output: ${config.output.resultsFile}`);
-    console.log(`  Screenshots: ${config.output.screenshotsDir}/`);
-
-    console.log('Snapshots', snapshots);
-    // return;
 
     // Process snapshots
     let successCount = 0;
     let failCount = 0;
 
+    console.log(`  Snapshots to process: ${snapshots.length}`);
     console.log(`\n--- Starting scrape of ${snapshots.length} snapshot(s) ---\n`);
 
     for (let i = 0; i < snapshots.length; i++) {
@@ -198,7 +185,7 @@ async function main() {
             console.error(`  Error processing snapshot ${snapshot.timestamp}:`, error.message);
             failCount++;
 
-            // Save failed result
+            // Save a failed result
             const failedResult = {
                 [snapshot.date]: {
                     archiveUrl: snapshot.archiveUrl,
