@@ -22,3 +22,9 @@ Date Range Mode
 ```bash
 node index startDate EndDate
 ```
+
+Edit settings in config.js 
+- Enable/Disable screenshots
+- Enable/Disable random mode
+- Adjust the number of random dates to scrape
+- Change the number of links to check
